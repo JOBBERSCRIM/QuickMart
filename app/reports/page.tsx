@@ -1,4 +1,6 @@
 "use client";
+
+import ProtectedRoute from "../components/ProtectedRoute";
 import { useState, useEffect } from "react";
 import { supabase } from "../../lib/db";
 import { Bar, Line, Pie } from "react-chartjs-2";
@@ -27,18 +29,27 @@ ChartJS.register(
   ArcElement
 );
 
-export default function ReportsPage() {
+function ReportsPage() {
+  // 🔑 State
   const [sales, setSales] = useState<any[]>([]);
   const [summary, setSummary] = useState<any[]>([]);
   const [topItems, setTopItems] = useState<any[]>([]);
   const [dailyRevenue, setDailyRevenue] = useState<any[]>([]);
+  const [stockLevels, setStockLevels] = useState<any[]>([]);
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
 
+  // Restock controls
+  const [restockTarget, setRestockTarget] = useState<string | null>(null);
+  const [restockQty, setRestockQty] = useState<number>(0);
+
+  // 🔑 Fetch data on mount
   useEffect(() => {
     fetchSales();
+    fetchStockLevels();
   }, []);
 
+  // 🔑 Fetch sales data
   async function fetchSales() {
     let query = supabase
       .from("sales")
@@ -60,6 +71,40 @@ export default function ReportsPage() {
     }
   }
 
+  // 🔑 Fetch stock levels
+  async function fetchStockLevels() {
+    const { data, error } = await supabase
+      .from("current_stock_levels")
+      .select("*")
+      .order("current_level", { ascending: true });
+
+    if (error) {
+      console.error("Error fetching stock levels:", error.message);
+    } else {
+      setStockLevels(data ?? []);
+    }
+  }
+
+  // 🔑 Restock function
+  async function restockItem(itemId: string, addQty: number) {
+    const item = stockLevels.find((i) => i.id === itemId);
+    if (!item) return;
+
+    const newQty = item.stocked + addQty;
+    const { error } = await supabase
+      .from("items")
+      .update({ quantity: newQty })
+      .eq("id", itemId);
+
+    if (error) {
+      console.error("Error restocking item:", error.message);
+    } else {
+      setRestockTarget(null);
+      setRestockQty(0);
+      fetchStockLevels(); // refresh table after update
+    }
+  }
+    // 🔑 Compute summary by category
   function computeSummary(salesData: any[]) {
     const grouped: Record<string, { totalQty: number; totalRevenue: number }> = {};
     salesData.forEach((sale) => {
@@ -80,6 +125,7 @@ export default function ReportsPage() {
     );
   }
 
+  // 🔑 Compute top items by revenue
   function computeTopItems(salesData: any[]) {
     const grouped: Record<string, number> = {};
     salesData.forEach((sale) => {
@@ -96,6 +142,7 @@ export default function ReportsPage() {
     );
   }
 
+  // 🔑 Compute daily revenue trend
   function computeDailyRevenue(salesData: any[]) {
     const grouped: Record<string, number> = {};
     salesData.forEach((sale) => {
@@ -112,7 +159,9 @@ export default function ReportsPage() {
         .sort((a, b) => new Date(a.day).getTime() - new Date(b.day).getTime())
     );
   }
-    function exportCSV() {
+
+  // 🔑 Export sales data to CSV
+  function exportCSV() {
     const filteredSales = sales.map((sale) => ({
       Item: sale.items?.name || "Unknown Item",
       Category: sale.category,
@@ -129,6 +178,8 @@ export default function ReportsPage() {
       }),
     }));
 
+    if (filteredSales.length === 0) return;
+
     const headers = Object.keys(filteredSales[0]).join(",");
     const rows = filteredSales.map((row) => Object.values(row).join(",")).join("\n");
     const csvContent = headers + "\n" + rows;
@@ -143,6 +194,7 @@ export default function ReportsPage() {
     document.body.removeChild(link);
   }
 
+  // 🔑 Chart Data
   const categoryChartData = {
     labels: summary.map((s) => s.category),
     datasets: [
@@ -185,6 +237,16 @@ export default function ReportsPage() {
     return (
     <div className="min-h-screen bg-gray-50 p-8">
       <h1 className="text-3xl font-bold text-gray-800 mb-6">📊 Quickmart Reports</h1>
+
+      {/* Inventory Management Link */}
+      <div className="mb-6">
+        <a
+          href="/inventory"
+          className="text-blue-600 underline hover:text-blue-800 font-semibold"
+        >
+          Go to Full Inventory Management →
+        </a>
+      </div>
 
       {/* Filters */}
       <div className="bg-white shadow-md rounded-lg p-6 mb-8 flex gap-4">
@@ -273,7 +335,7 @@ export default function ReportsPage() {
 
       {/* Detailed Sales Table */}
       <h2 className="text-2xl font-semibold text-gray-700 mb-4">Detailed Sales</h2>
-      <div className="overflow-x-auto">
+      <div className="overflow-x-auto mb-10">
         <table className="min-w-full bg-white shadow rounded-lg">
           <thead className="bg-gray-100">
             <tr>
@@ -288,9 +350,7 @@ export default function ReportsPage() {
           <tbody>
             {sales.map((sale) => (
               <tr key={sale.id} className="border-t">
-                <td className="py-2 px-4 font-bold text-gray-900">
-                  {sale.items?.name || "Unknown Item"}
-                </td>
+                <td className="py-2 px-4 font-bold text-gray-900">{sale.items?.name || "Unknown Item"}</td>
                 <td className="py-2 px-4 text-gray-800">{sale.category}</td>
                 <td className="py-2 px-4 text-gray-800">{sale.unit}</td>
                 <td className="py-2 px-4 text-blue-700 font-bold">{sale.qty_sold}</td>
@@ -310,6 +370,84 @@ export default function ReportsPage() {
           </tbody>
         </table>
       </div>
-    </div>
+            {/* Current Stock Levels Table with Restock Controls */}
+      <h2 className="text-2xl font-semibold text-gray-700 mb-4">Current Stock Levels</h2>
+      <div className="overflow-x-auto">
+        <table className="min-w-full bg-white shadow rounded-lg">
+          <thead className="bg-gray-100">
+            <tr>
+              <th className="py-2 px-4 text-left text-gray-800 font-semibold">Item</th>
+              <th className="py-2 px-4 text-left text-gray-800 font-semibold">Stocked</th>
+              <th className="py-2 px-4 text-left text-gray-800 font-semibold">Sold</th>
+              <th className="py-2 px-4 text-left text-gray-800 font-semibold">Current Level</th>
+              <th className="py-2 px-4 text-left text-gray-800 font-semibold">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {stockLevels.map((row) => (
+              <tr key={row.id} className="border-t">
+                <td className="py-2 px-4 font-bold text-gray-900">{row.name}</td>
+                <td className="py-2 px-4 text-gray-800">{row.stocked}</td>
+                <td className="py-2 px-4 text-blue-700 font-bold">{row.sold}</td>
+                <td
+                  className={`py-2 px-4 font-bold ${
+                    row.current_level <= 5 ? "text-red-600 bg-red-100" : "text-green-700"
+                  }`}
+                >
+                  {row.current_level}
+                </td>
+                <td className="py-2 px-4">
+                  <button
+                    onClick={() => setRestockTarget(row.id)}
+                    className="bg-green-500 text-white px-2 py-1 rounded hover:bg-green-600"
+                  >
+                    ➕ Restock
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Restock Modal/Input */}
+      {restockTarget && (
+        <div className="mt-6 p-4 bg-gray-100 rounded shadow-md">
+          <h3 className="font-semibold mb-2">
+            Restock {stockLevels.find((i) => i.id === restockTarget)?.name}
+          </h3>
+          <input
+            type="number"
+            value={restockQty}
+            onChange={(e) => setRestockQty(Number(e.target.value))}
+            className="border rounded p-2 mr-2"
+            placeholder="Enter units to add"
+          />
+          <button
+            onClick={() => restockItem(restockTarget, restockQty)}
+            className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 mr-2"
+          >
+            ✅ Update Stock
+          </button>
+          <button
+            onClick={() => {
+              setRestockTarget(null);
+              setRestockQty(0);
+            }}
+            className="bg-gray-400 text-white px-4 py-2 rounded hover:bg-gray-500"
+          >
+            ❌ Cancel
+          </button>
+        </div>
+      )}
+        </div>
+  );
+}
+
+export default function Reports() {
+  return (
+    <ProtectedRoute allowedRoles={["manager", "admin", "viewer"]}>
+      <ReportsPage />
+    </ProtectedRoute>
   );
 }

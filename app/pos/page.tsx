@@ -1,8 +1,9 @@
 "use client";
 import { useState, useEffect } from "react";
 import { supabase } from "../../lib/db";
+import ProtectedRoute from "../components/ProtectedRoute";
 
-export default function POSPage() {
+function POSPage() {
   const [items, setItems] = useState<any[]>([]);
   const [sales, setSales] = useState<any[]>([]);   // ✅ add sales state
   const [selectedItem, setSelectedItem] = useState("");
@@ -233,5 +234,12 @@ export default function POSPage() {
         </div>
       </div>
     </div>
+  );
+}
+export default function POS() {
+  return (
+    <ProtectedRoute allowedRoles={["cashier"]}>
+      <POSPage />
+    </ProtectedRoute>
   );
 }

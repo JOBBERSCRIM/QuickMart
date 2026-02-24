@@ -2,8 +2,9 @@
 
 import { useState, useEffect } from "react";
 import { supabase } from "../../lib/db";
+import ProtectedRoute from "../components/ProtectedRoute";  // ✅ NEW import
 
-export default function InventoryPage() {
+function InventoryPage() {
   const [items, setItems] = useState<any[]>([]);
   const [name, setName] = useState("");
   const [category, setCategory] = useState("");
@@ -138,5 +139,14 @@ export default function InventoryPage() {
         ))}
       </div>
     </div>
+  );
+}
+
+// ✅ NEW default export: wraps InventoryPage in ProtectedRoute
+export default function Inventory() {
+  return (
+    <ProtectedRoute allowedRoles={["admin","manager"]}>
+      <InventoryPage />
+    </ProtectedRoute>
   );
 }
