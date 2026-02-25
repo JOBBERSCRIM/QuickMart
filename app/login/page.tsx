@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { supabase } from "../../lib/db";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -13,8 +14,10 @@ export default function LoginPage() {
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
 
-    // Sign in with Supabase Auth
-    const { data: { user }, error: authError } = await supabase.auth.signInWithPassword({
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
@@ -29,9 +32,6 @@ export default function LoginPage() {
       return;
     }
 
-    console.log("Logged in user:", user); // ✅ Debug: check UUID
-
-    // Fetch profile role
     const { data: profile, error: profileError } = await supabase
       .from("profiles")
       .select("role")
@@ -39,7 +39,6 @@ export default function LoginPage() {
       .single();
 
     if (profileError) {
-      console.error("Profile query error:", profileError.message);
       setError(profileError.message);
       return;
     }
@@ -49,9 +48,6 @@ export default function LoginPage() {
       return;
     }
 
-    console.log("Profile lookup:", profile); // ✅ Debug: confirm role
-
-    // Route based on role
     if (profile.role === "admin") router.push("/admin");
     else if (profile.role === "manager") router.push("/reports");
     else if (profile.role === "cashier") router.push("/pos");
@@ -61,35 +57,43 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50">
-      <form
-        onSubmit={handleLogin}
-        className="bg-white shadow-md rounded-lg p-6 w-96 space-y-4"
-      >
-        <h1 className="text-2xl font-bold text-gray-800">🔐 Login</h1>
-        {error && <p className="text-red-600">{error}</p>}
-        <input
-          type="email"
-          placeholder="Email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          className="w-full border rounded p-2"
-          required
-        />
-        <input
-          type="password"
-          placeholder="Password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          className="w-full border rounded p-2"
-          required
-        />
-        <button
-          type="submit"
-          className="w-full bg-green-600 text-white py-2 rounded hover:bg-green-700"
-        >
-          Login
-        </button>
-      </form>
+      <div className="bg-white shadow-md rounded-lg p-8 w-96 space-y-6">
+        {/* Logo + Welcome (centered) */}
+        <div className="flex flex-col items-center text-center">
+          <Image src="/logo.png" alt="Quickmart Logo" width={100} height={100} />
+          <h1 className="text-2xl font-bold text-gray-800 mt-4">
+            Welcome to Quickmart, Courtesy of Qtrinova Labs. Africa
+          </h1>
+          <p className="text-gray-600">Please log in to continue</p>
+        </div>
+
+        {/* Login Form */}
+        <form onSubmit={handleLogin} className="space-y-4">
+          {error && <p className="text-red-600 text-center">{error}</p>}
+          <input
+            type="email"
+            placeholder="Email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            className="w-full border rounded p-2"
+            required
+          />
+          <input
+            type="password"
+            placeholder="Password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            className="w-full border rounded p-2"
+            required
+          />
+          <button
+            type="submit"
+            className="w-full bg-green-600 text-white py-2 rounded hover:bg-green-700"
+          >
+            Login
+          </button>
+        </form>
+      </div>
     </div>
   );
 }
