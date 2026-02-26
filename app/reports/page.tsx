@@ -374,7 +374,7 @@ function ReportsPage() {
       <h2 className="text-2xl font-semibold text-gray-700 mb-4">Current Stock Levels</h2>
       <div className="overflow-x-auto">
         <table className="min-w-full bg-white shadow rounded-lg">
-          <thead className="bg-gray-100">
+          <thead className="bg-green-100">
             <tr>
               <th className="py-2 px-4 text-left text-gray-800 font-semibold">Item</th>
               <th className="py-2 px-4 text-left text-gray-800 font-semibold">Stocked</th>
@@ -399,7 +399,7 @@ function ReportsPage() {
                 <td className="py-2 px-4">
                   <button
                     onClick={() => setRestockTarget(row.id)}
-                    className="bg-green-500 text-white px-2 py-1 rounded hover:bg-green-600"
+                    className="bg-green-500 text-red px-2 py-1 rounded hover:bg-green-800"
                   >
                     ➕ Restock
                   </button>
@@ -412,7 +412,7 @@ function ReportsPage() {
 
       {/* Restock Modal/Input */}
       {restockTarget && (
-        <div className="mt-6 p-4 bg-gray-100 rounded shadow-md">
+        <div className="mt-6 p-4 bg-green-600 rounded shadow-md">
           <h3 className="font-semibold mb-2">
             Restock {stockLevels.find((i) => i.id === restockTarget)?.name}
           </h3>
@@ -425,7 +425,7 @@ function ReportsPage() {
           />
           <button
             onClick={() => restockItem(restockTarget, restockQty)}
-            className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 mr-2"
+            className="bg-red-600 text-white px-4 py-2 rounded hover:bg-blue-700 mr-2"
           >
             ✅ Update Stock
           </button>

@@ -229,7 +229,7 @@ function InventoryPage() {
 
       {/* Edit Modal */}
       {editTarget && (
-        <div className="mt-6 p-4 bg-gray-100 rounded shadow-md max-w-lg">
+        <div className="mt-6 p-4 bg-green-600 rounded shadow-md max-w-lg">
           <h3 className="font-semibold mb-2">Edit {editTarget.name}</h3>
           <input
             type="text"
@@ -264,7 +264,7 @@ function InventoryPage() {
           <div className="flex gap-2">
             <button
               onClick={() => updateItem(editTarget.id)}
-              className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700"
+              className="bg-red-600 text-white px-4 py-2 rounded hover:bg-green-700"
             >
               ✅ Save
             </button>
@@ -280,14 +280,14 @@ function InventoryPage() {
 
       {/* Delete Confirmation */}
       {deleteTarget && (
-        <div className="mt-6 p-4 bg-red-100 rounded shadow-md max-w-lg">
+        <div className="mt-6 p-4 bg-red-600 rounded shadow-md max-w-lg">
           <h3 className="font-semibold mb-2">
             Are you sure you want to delete {deleteTarget.name}?
           </h3>
           <div className="flex gap-2">
             <button
               onClick={() => deleteItem(deleteTarget.id)}
-              className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700"
+              className="bg-green-600 text-white px-4 py-2 rounded hover:bg-red-700"
             >
               🗑️ Confirm Delete
             </button>
