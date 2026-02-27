@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "../../lib/db";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
@@ -9,7 +9,13 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [fadeIn, setFadeIn] = useState(false);
   const router = useRouter();
+
+  useEffect(() => {
+    // Trigger fade-in once component mounts
+    setFadeIn(true);
+  }, []);
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
@@ -56,7 +62,11 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
+    <div
+      className={`min-h-screen flex items-center justify-center bg-gray-50 transition-opacity duration-500 ${
+        fadeIn ? "opacity-100" : "opacity-0"
+      }`}
+    >
       <div className="bg-white shadow-md rounded-lg p-8 w-96 space-y-6">
         {/* Logo + Welcome (centered) */}
         <div className="flex flex-col items-center text-center">
