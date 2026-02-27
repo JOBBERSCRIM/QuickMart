@@ -10,10 +10,10 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [fadeIn, setFadeIn] = useState(false);
+  const [showPassword, setShowPassword] = useState(false); // 👁️ toggle state
   const router = useRouter();
 
   useEffect(() => {
-    // Trigger fade-in once component mounts
     setFadeIn(true);
   }, []);
 
@@ -68,7 +68,7 @@ export default function LoginPage() {
       }`}
     >
       <div className="bg-white shadow-md rounded-lg p-8 w-96 space-y-6">
-        {/* Logo + Welcome (centered) */}
+        {/* Logo + Welcome */}
         <div className="flex flex-col items-center text-center">
           <Image src="/logo.png" alt="Quickmart Logo" width={100} height={100} />
           <h1 className="text-2xl font-bold text-gray-800 mt-4">
@@ -88,14 +88,26 @@ export default function LoginPage() {
             className="w-full border rounded p-2"
             required
           />
-          <input
-            type="password"
-            placeholder="Password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="w-full border rounded p-2"
-            required
-          />
+
+          {/* Password with toggle */}
+          <div className="relative">
+            <input
+              type={showPassword ? "text" : "password"}
+              placeholder="Password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="w-full border rounded p-2 pr-10"
+              required
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute right-2 top-2 text-gray-500 hover:text-gray-700"
+            >
+              {showPassword ? "🙈" : "👁️"}
+            </button>
+          </div>
+
           <button
             type="submit"
             className="w-full bg-green-600 text-white py-2 rounded hover:bg-green-700"
