@@ -236,7 +236,7 @@ function ReportsPage() {
   };
     return (
     <div className="min-h-screen bg-gray-50 p-8">
-      <h1 className="text-3xl font-bold text-gray-800 mb-6">📊 Quickmart Reports</h1>
+      <h1 className="text-3xl font-bold text-gray-800 mb-6">📊 Denis' Entreprises Reports</h1>
 
       {/* Inventory Management Link */}
       <div className="mb-6">

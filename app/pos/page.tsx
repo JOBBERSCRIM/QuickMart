@@ -111,7 +111,7 @@ function POSPage() {
   const buttons = ["7","8","9","/","4","5","6","*","1","2","3","-","0",".","C","+","="];
     return (
     <div className="min-h-screen bg-gray-50 p-8">
-      <h1 className="text-3xl font-bold text-gray-800 mb-6">💵 Quickmart POS</h1>
+      <h1 className="text-3xl font-bold text-gray-800 mb-6">💵 Denis' Entreprises Quickmart POS</h1>
 
       {message && (
         <div

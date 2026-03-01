@@ -72,7 +72,7 @@ export default function LoginPage() {
         <div className="flex flex-col items-center text-center">
           <Image src="/logo.png" alt="Quickmart Logo" width={100} height={100} />
           <h1 className="text-2xl font-bold text-gray-800 mt-4">
-            Welcome to Quickmart, Courtesy of Qtrinova Labs. Africa
+            Welcome to Denis' Entreprises, Courtesy of Qtrinova Labs. Africa
           </h1>
           <p className="text-gray-600">Please log in to continue</p>
         </div>
