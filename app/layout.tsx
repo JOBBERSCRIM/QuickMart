@@ -14,8 +14,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Quickmart",
-  description: "Quickmart POS & Reporting Platform",
+  title: "Denis' Entreprises",
+  description: "Denis' Entreprises POS & Reporting Platform",
   icons: {
     icon: "/favicon.ico",
     shortcut: "/favicon.ico",
