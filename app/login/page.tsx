@@ -9,8 +9,9 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
   const [fadeIn, setFadeIn] = useState(false);
-  const [showPassword, setShowPassword] = useState(false); // 👁️ toggle state
+  const [showPassword, setShowPassword] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -19,6 +20,8 @@ export default function LoginPage() {
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
+    setError("");
+    setSuccess("");
 
     const {
       data: { user },
@@ -38,11 +41,12 @@ export default function LoginPage() {
       return;
     }
 
+    // ✅ Only check role now, no must_change_password
     const { data: profile, error: profileError } = await supabase
       .from("profiles")
       .select("role")
       .eq("id", user.id)
-      .single();
+      .maybeSingle();
 
     if (profileError) {
       setError(profileError.message);
@@ -54,11 +58,30 @@ export default function LoginPage() {
       return;
     }
 
+    // ✅ Route by role
     if (profile.role === "admin") router.push("/admin");
     else if (profile.role === "manager") router.push("/reports");
     else if (profile.role === "cashier") router.push("/pos");
     else if (profile.role === "viewer") router.push("/reports");
     else setError("Unknown role: " + profile.role);
+  }
+
+  async function handleForgotPassword() {
+    if (!email) {
+      setError("Please enter your email first.");
+      return;
+    }
+
+    const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/change-password`,
+    });
+
+    if (resetError) {
+      setError(resetError.message);
+      return;
+    }
+
+    setSuccess("Password reset email sent! Check your inbox.");
   }
 
   return (
@@ -80,6 +103,8 @@ export default function LoginPage() {
         {/* Login Form */}
         <form onSubmit={handleLogin} className="space-y-4">
           {error && <p className="text-red-600 text-center">{error}</p>}
+          {success && <p className="text-green-600 text-center">{success}</p>}
+
           <input
             type="email"
             placeholder="Email"
@@ -115,6 +140,17 @@ export default function LoginPage() {
             Login
           </button>
         </form>
+
+        {/* Forgot Password */}
+        <div className="text-center mt-2">
+          <button
+            type="button"
+            onClick={handleForgotPassword}
+            className="text-sm text-green-600 hover:underline"
+          >
+            Forgot password?
+          </button>
+        </div>
       </div>
     </div>
   );

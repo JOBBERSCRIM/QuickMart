@@ -33,6 +33,10 @@ export default function Header() {
         <Link href="/inventory" className="text-gray-700 hover:text-green-600 font-medium">
           Inventory
         </Link>
+        {/* ✅ Profile link for account settings */}
+        <Link href="/profile" className="text-gray-700 hover:text-green-600 font-medium">
+          Profile
+        </Link>
         <button
           onClick={handleLogout}
           disabled={loading}

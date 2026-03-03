@@ -2,13 +2,18 @@
 import { useState, useEffect } from "react";
 import { supabase } from "../../lib/db";
 import ProtectedRoute from "../components/ProtectedRoute";
+import { JSX } from "react/jsx-runtime";
 
-function POSPage() {
+function POSPage(): JSX.Element {
   const [items, setItems] = useState<any[]>([]);
-  const [sales, setSales] = useState<any[]>([]);   // ✅ add sales state
+  const [sales, setSales] = useState<any[]>([]);
   const [selectedItem, setSelectedItem] = useState("");
   const [quantity, setQuantity] = useState("");
   const [message, setMessage] = useState<{ type: string; text: string } | null>(null);
+
+  // ✅ Price list state + search
+  const [priceList, setPriceList] = useState<any[]>([]);
+  const [searchTerm, setSearchTerm] = useState("");
 
   // Calculator state
   const [calcInput, setCalcInput] = useState("");
@@ -16,13 +21,17 @@ function POSPage() {
 
   useEffect(() => {
     fetchItems();
-    fetchSales();   // ✅ load sales history too
+    fetchSales();
+    fetchPriceList();
   }, []);
 
   async function fetchItems() {
     const { data, error } = await supabase.from("items").select("*");
-    if (error) console.error("Error fetching items:", error.message);
-    else setItems(data ?? []);
+    if (error) {
+      console.error("Error fetching items:", error.message);
+    } else {
+      setItems(data ?? []);
+    }
   }
 
   async function fetchSales() {
@@ -30,65 +39,78 @@ function POSPage() {
       .from("sales")
       .select("*, items(name)")
       .order("timestamp", { ascending: false })
-      .limit(10);   // show recent 10
-    if (error) console.error("Error fetching sales:", error.message);
-    else setSales(data ?? []);
-  }
-   async function processSale(e: React.FormEvent) {
-  e.preventDefault();
-  const item = items.find((i) => i.id === selectedItem);
-  if (!item) return;
-
-  const qty = parseInt(quantity);
-  if (qty > item.quantity) {
-    setMessage({ type: "error", text: "Not enough stock available!" });
-    return;
+      .limit(10);
+    if (error) {
+      console.error("Error fetching sales:", error.message);
+    } else {
+      setSales(data ?? []);
+    }
   }
 
-  const totalPrice = item.price * qty;
-
-  // Update stock
-  const { error: updateError } = await supabase
-    .from("items")
-    .update({ quantity: item.quantity - qty })
-    .eq("id", item.id);
-
-  if (updateError) {
-    setMessage({ type: "error", text: "Error updating stock." });
-    return;
+  async function fetchPriceList() {
+    const { data, error } = await supabase.from("price_list").select("*");
+    if (error) {
+      console.error("Error fetching price list:", error.message);
+    } else {
+      setPriceList(data ?? []);
+    }
   }
 
-  // ✅ Kampala-local timestamp in Postgres-friendly format
-  const timestamp = new Date().toLocaleString("sv-SE", {
-    timeZone: "Africa/Kampala",
-  });
+  async function processSale(e: React.FormEvent) {
+    e.preventDefault();
+    const item = items.find((i) => i.id === selectedItem);
+    if (!item) return;
 
-  // Insert sale
-  const { error: saleError } = await supabase.from("sales").insert([
-    {
-      item_id: item.id,
-      qty_sold: qty,
-      total_price: totalPrice,
-      category: item.category,
-      unit: item.unit,
-      timestamp,
-    },
-  ]);
+    const qty = parseInt(quantity);
+    if (qty > item.quantity) {
+      setMessage({ type: "error", text: "Not enough stock available!" });
+      return;
+    }
 
-  if (saleError) {
-    setMessage({ type: "error", text: "Error recording sale." });
-    return;
+    const totalPrice = item.price * qty;
+
+    // Update stock
+    const { error: updateError } = await supabase
+      .from("items")
+      .update({ quantity: item.quantity - qty })
+      .eq("id", item.id);
+
+    if (updateError) {
+      setMessage({ type: "error", text: "Error updating stock." });
+      return;
+    }
+
+    // ✅ Kampala-local timestamp
+    const timestamp = new Date().toLocaleString("sv-SE", {
+      timeZone: "Africa/Kampala",
+    });
+
+    // Insert sale
+    const { error: saleError } = await supabase.from("sales").insert([
+      {
+        item_id: item.id,
+        qty_sold: qty,
+        total_price: totalPrice,
+        category: item.category,
+        unit: item.unit,
+        timestamp,
+      },
+    ]);
+
+    if (saleError) {
+      setMessage({ type: "error", text: "Error recording sale." });
+      return;
+    }
+
+    setQuantity("");
+    setSelectedItem("");
+    fetchItems();
+    fetchSales();
+    setMessage({
+      type: "success",
+      text: `✔ Sale recorded: ${qty} ${item.unit} of ${item.name} (${item.category}) = ${totalPrice} UGX`,
+    });
   }
-
-  setQuantity("");
-  setSelectedItem("");
-  fetchItems();
-  fetchSales();
-  setMessage({
-    type: "success",
-    text: `✔ Sale recorded: ${qty} ${item.unit} of ${item.name} (${item.category}) = ${totalPrice} UGX`,
-  });
-}
 
   // Calculator logic
   function handleButtonClick(value: string) {
@@ -109,9 +131,16 @@ function POSPage() {
   }
 
   const buttons = ["7","8","9","/","4","5","6","*","1","2","3","-","0",".","C","+","="];
-    return (
+
+  // ✅ Filtered price list
+  const filteredPriceList = priceList.filter((item) =>
+    item.name.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+  return (
     <div className="min-h-screen bg-gray-50 p-8">
-      <h1 className="text-3xl font-bold text-gray-800 mb-6">💵 Denis' Entreprises Quickmart POS</h1>
+      <h1 className="text-3xl font-bold text-gray-800 mb-6">
+        💵 Denis' Enterprises Quickmart POS
+      </h1>
 
       {message && (
         <div
@@ -191,8 +220,9 @@ function POSPage() {
             ))}
           </div>
         </div>
-      </div>
-            {/* Sales History */}
+      </div> {/* closes grid wrapper */}
+
+      {/* Sales History */}
       <div className="mt-10">
         <h2 className="text-2xl font-semibold text-gray-700 mb-4">Recent Sales</h2>
         <div className="overflow-x-auto">
@@ -233,9 +263,47 @@ function POSPage() {
           </table>
         </div>
       </div>
+
+      {/* Price List */}
+      <div className="mt-10">
+        <h2 className="text-2xl font-semibold text-gray-700 mb-4">Price List</h2>
+        {/* ✅ Search bar */}
+        <input
+          type="text"
+          placeholder="Search item..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="w-full border rounded p-2 mb-4 text-gray-800"
+        />
+        <div className="overflow-x-auto">
+          <table className="min-w-full bg-white shadow rounded-lg">
+            <thead className="bg-gray-100">
+              <tr>
+                <th className="py-2 px-4 text-left text-gray-800 font-semibold">Item</th>
+                <th className="py-2 px-4 text-left text-gray-800 font-semibold">Price (UGX)</th>
+                <th className="py-2 px-4 text-left text-gray-800 font-semibold">Unit</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredPriceList.map((item, idx) => (
+                <tr
+                  key={idx}
+                  className="border-t hover:bg-gray-50 cursor-pointer"
+                  onClick={() => setSelectedItem(item.id)} // ✅ click-to-select
+                >
+                  <td className="py-2 px-4 font-bold text-gray-900">{item.name}</td>
+                  <td className="py-2 px-4 text-green-700 font-bold">{item.price}</td>
+                  <td className="py-2 px-4 text-gray-800">{item.unit}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
     </div>
   );
 }
+
 export default function POS() {
   return (
     <ProtectedRoute allowedRoles={["cashier"]}>
