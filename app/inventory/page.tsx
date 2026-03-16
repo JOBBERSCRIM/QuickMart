@@ -9,7 +9,8 @@ function InventoryPage() {
   const [name, setName] = useState("");
   const [category, setCategory] = useState("");
   const [unit, setUnit] = useState("");
-  const [price, setPrice] = useState("");
+  const [price, setPrice] = useState(""); // selling price
+  const [purchasePrice, setPurchasePrice] = useState(""); // NEW purchase price
   const [quantity, setQuantity] = useState("");
 
   // Edit/Delete state
@@ -20,7 +21,8 @@ function InventoryPage() {
   const [editName, setEditName] = useState("");
   const [editCategory, setEditCategory] = useState("");
   const [editUnit, setEditUnit] = useState("");
-  const [editPrice, setEditPrice] = useState("");
+  const [editPrice, setEditPrice] = useState(""); // selling price
+  const [editPurchasePrice, setEditPurchasePrice] = useState(""); // NEW purchase price
   const [editQuantity, setEditQuantity] = useState("");
 
   // Toast state
@@ -46,6 +48,7 @@ function InventoryPage() {
         category,
         unit,
         price: parseFloat(price),
+        purchase_price: parseFloat(purchasePrice), // NEW field
         quantity: parseInt(quantity),
       },
     ]);
@@ -57,6 +60,7 @@ function InventoryPage() {
       setCategory("");
       setUnit("");
       setPrice("");
+      setPurchasePrice(""); // reset field
       setQuantity("");
       fetchItems();
       showToast("Item added successfully ✅", "success");
@@ -71,6 +75,7 @@ function InventoryPage() {
         category: editCategory,
         unit: editUnit,
         price: parseFloat(editPrice),
+        purchase_price: parseFloat(editPurchasePrice), // NEW field
         quantity: parseInt(editQuantity),
       })
       .eq("id", itemId);
@@ -100,11 +105,11 @@ function InventoryPage() {
   // Toast helper
   function showToast(message: string, type: "success" | "error") {
     setToast({ message, type });
-    setTimeout(() => setToast(null), 3000); // auto-hide after 3s
+    setTimeout(() => setToast(null), 3000);
   }
     return (
     <div className="min-h-screen bg-gray-50 p-8">
-      <h1 className="text-3xl font-bold text-gray-800 mb-6">🛒 Denis' Entreprises Inventory</h1>
+      <h1 className="text-3xl font-bold text-gray-800 mb-6">🛒 Denis' Enterprises Inventory</h1>
 
       {/* Toast Notification */}
       {toast && (
@@ -158,11 +163,21 @@ function InventoryPage() {
         </select>
 
         <input
-          placeholder="Price per unit"
+          placeholder="Selling price per unit"
           type="number"
           step="0.01"
           value={price}
           onChange={(e) => setPrice(e.target.value)}
+          className="w-full border rounded p-2 text-gray-800"
+          required
+        />
+
+        <input
+          placeholder="Purchase price per unit"
+          type="number"
+          step="0.01"
+          value={purchasePrice}
+          onChange={(e) => setPurchasePrice(e.target.value)}
           className="w-full border rounded p-2 text-gray-800"
           required
         />
@@ -199,7 +214,10 @@ function InventoryPage() {
                 {item.quantity} {item.unit}
               </p>
               <p className="text-green-600 font-bold">
-                {item.price} UGX / {item.unit}
+                Selling: {item.price} UGX / {item.unit}
+              </p>
+              <p className="text-blue-600">
+                Purchase: {item.purchase_price} UGX / {item.unit}
               </p>
             </div>
             <div className="flex gap-2">
@@ -209,8 +227,9 @@ function InventoryPage() {
                   setEditName(item.name);
                   setEditCategory(item.category);
                   setEditUnit(item.unit);
-                  setEditPrice(item.price.toString());
-                  setEditQuantity(item.quantity.toString());
+                  setEditPrice(item.price?.toString() ?? "");
+                  setEditPurchasePrice(item.purchase_price?.toString() ?? "");
+                  setEditQuantity(item.quantity?.toString() ?? "");
                 }}
                 className="bg-blue-500 text-white px-2 py-1 rounded hover:bg-blue-600"
               >
@@ -253,6 +272,12 @@ function InventoryPage() {
             type="number"
             value={editPrice}
             onChange={(e) => setEditPrice(e.target.value)}
+            className="w-full border rounded p-2 mb-2"
+          />
+          <input
+            type="number"
+            value={editPurchasePrice}
+            onChange={(e) => setEditPurchasePrice(e.target.value)}
             className="w-full border rounded p-2 mb-2"
           />
           <input

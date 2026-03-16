@@ -43,10 +43,19 @@ function ReportsPage() {
   const [restockTarget, setRestockTarget] = useState<string | null>(null);
   const [restockQty, setRestockQty] = useState<number>(0);
 
+  // 📊 Profit Views
+  const [dailyProfit, setDailyProfit] = useState<any[]>([]);
+  const [categoryProfit, setCategoryProfit] = useState<any[]>([]);
+
+  // Chat Assistant
+  const [chatQuery, setChatQuery] = useState("");
+  const [chatAnswer, setChatAnswer] = useState<string | null>(null);
+
   // 🔑 Fetch data on mount
   useEffect(() => {
     fetchSales();
     fetchStockLevels();
+    fetchProfitViews();
   }, []);
 
   // 🔑 Fetch sales data
@@ -85,6 +94,29 @@ function ReportsPage() {
     }
   }
 
+  // 🔑 Fetch profit views
+  async function fetchProfitViews() {
+    const { data: dailyData, error: dailyError } = await supabase
+      .from("profit_report")
+      .select("*");
+
+    if (dailyError) {
+      console.error("Error fetching daily profit:", dailyError.message);
+    } else {
+      setDailyProfit(dailyData ?? []);
+    }
+
+    const { data: categoryData, error: categoryError } = await supabase
+      .from("profit_by_category")
+      .select("*");
+
+    if (categoryError) {
+      console.error("Error fetching category profit:", categoryError.message);
+    } else {
+      setCategoryProfit(categoryData ?? []);
+    }
+  }
+
   // 🔑 Restock function
   async function restockItem(itemId: string, addQty: number) {
     const item = stockLevels.find((i) => i.id === itemId);
@@ -104,7 +136,8 @@ function ReportsPage() {
       fetchStockLevels(); // refresh table after update
     }
   }
-    // 🔑 Compute summary by category
+
+  // 🔑 Compute summary by category
   function computeSummary(salesData: any[]) {
     const grouped: Record<string, { totalQty: number; totalRevenue: number }> = {};
     salesData.forEach((sale) => {
@@ -159,8 +192,7 @@ function ReportsPage() {
         .sort((a, b) => new Date(a.day).getTime() - new Date(b.day).getTime())
     );
   }
-
-  // 🔑 Export sales data to CSV
+  // 🔑 Export sales + profit data to CSV
   function exportCSV() {
     const filteredSales = sales.map((sale) => ({
       Item: sale.items?.name || "Unknown Item",
@@ -193,6 +225,35 @@ function ReportsPage() {
     link.click();
     document.body.removeChild(link);
   }
+
+// 🔑 Export daily profit data to CSV
+function exportDailyProfitCSV() {
+  const rows = dailyProfit.map((row) => ({
+    Day: row.day,
+    GrossRevenue: row.gross_revenue,
+    NetProfit: row.net_profit,
+    MarginPercent:
+      row.gross_revenue > 0
+        ? ((row.net_profit / row.gross_revenue) * 100).toFixed(2)
+        : "0",
+  }));
+
+  if (rows.length === 0) return;
+
+  const headers = Object.keys(rows[0]).join(",");
+  const csvRows = rows.map((r) => Object.values(r).join(",")).join("\n");
+  const csvContent = headers + "\n" + csvRows;
+
+  const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.setAttribute("download", "daily_profit_report.csv");
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+}
+
 
   // 🔑 Chart Data
   const categoryChartData = {
@@ -234,9 +295,42 @@ function ReportsPage() {
       },
     ],
   };
-    return (
+
+  // 📊 Profit Chart Data
+  const dailyProfitChartData = {
+    labels: dailyProfit.map((d) => d.day),
+    datasets: [
+      {
+        label: "Gross Revenue (UGX)",
+        data: dailyProfit.map((d) => d.gross_revenue),
+        borderColor: "rgba(59,130,246,1)",
+        backgroundColor: "rgba(59,130,246,0.3)",
+        fill: true,
+      },
+      {
+        label: "Net Profit (UGX)",
+        data: dailyProfit.map((d) => d.net_profit),
+        borderColor: "rgba(234,179,8,1)",
+        backgroundColor: "rgba(234,179,8,0.3)",
+        fill: true,
+      },
+    ],
+  };
+
+  const categoryProfitChartData = {
+    labels: categoryProfit.map((c) => c.category),
+    datasets: [
+      {
+        label: "Net Profit (UGX)",
+        data: categoryProfit.map((c) => c.net_profit),
+        backgroundColor: "rgba(239,68,68,0.7)",
+      },
+    ],
+  };
+
+  return (
     <div className="min-h-screen bg-gray-50 p-8">
-      <h1 className="text-3xl font-bold text-gray-800 mb-6">📊 Denis' Entreprises Reports</h1>
+      <h1 className="text-3xl font-bold text-gray-800 mb-6">📊 Denis' Enterprises Reports</h1>
 
       {/* Inventory Management Link */}
       <div className="mb-6">
@@ -269,7 +363,10 @@ function ReportsPage() {
           />
         </div>
         <button
-          onClick={fetchSales}
+          onClick={() => {
+            fetchSales();
+            fetchProfitViews();
+          }}
           className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 self-end"
         >
           🔍 Apply Filter
@@ -278,8 +375,17 @@ function ReportsPage() {
           onClick={exportCSV}
           className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 self-end"
         >
-          📤 Export CSV
+          📤 Export Sales to CSV
         </button>
+
+          <button
+  onClick={exportDailyProfitCSV}
+  className="bg-yellow-600 text-white px-4 py-2 rounded hover:bg-yellow-700 self-end"
+>
+  📤 Export Daily Profit CSV
+</button>
+
+
       </div>
 
       {/* Charts Grid Row 1 */}
@@ -332,7 +438,62 @@ function ReportsPage() {
           />
         </div>
       </div>
+      {/* Profit Tables */}
+      <h2 className="text-2xl font-semibold text-gray-700 mb-4">Daily Profit Summary</h2>
+      <div className="overflow-x-auto mb-10">
+        <table className="min-w-full bg-white shadow rounded-lg">
+          <thead className="bg-gray-100">
+            <tr>
+              <th className="py-2 px-4 text-left text-gray-800 font-semibold">Day</th>
+              <th className="py-2 px-4 text-left text-gray-800 font-semibold">Gross Revenue (UGX)</th>
+              <th className="py-2 px-4 text-left text-gray-800 font-semibold">Net Profit (UGX)</th>
+              <th className="py-2 px-4 text-left text-gray-800 font-semibold">Margin (%)</th>
+            </tr>
+          </thead>
+          <tbody>
+            {dailyProfit.map((row, idx) => (
+              <tr key={idx} className="border-t">
+                <td className="py-2 px-4 text-gray-900 font-bold">{row.day}</td>
+                <td className="py-2 px-4 text-green-700 font-bold">{row.gross_revenue}</td>
+                <td className="py-2 px-4 text-blue-700 font-bold">{row.net_profit}</td>
+                <td className="py-2 px-4 text-gray-800">
+                  {row.gross_revenue > 0
+                    ? ((row.net_profit / row.gross_revenue) * 100).toFixed(2)
+                    : "0"}%
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
 
+      <h2 className="text-2xl font-semibold text-gray-700 mb-4">Category Profit Summary</h2>
+      <div className="overflow-x-auto mb-10">
+        <table className="min-w-full bg-white shadow rounded-lg">
+          <thead className="bg-gray-100">
+            <tr>
+              <th className="py-2 px-4 text-left text-gray-800 font-semibold">Category</th>
+              <th className="py-2 px-4 text-left text-gray-800 font-semibold">Gross Revenue (UGX)</th>
+              <th className="py-2 px-4 text-left text-gray-800 font-semibold">Net Profit (UGX)</th>
+              <th className="py-2 px-4 text-left text-gray-800 font-semibold">Margin (%)</th>
+            </tr>
+          </thead>
+          <tbody>
+            {categoryProfit.map((row, idx) => (
+              <tr key={idx} className="border-t">
+                <td className="py-2 px-4 text-gray-900 font-bold">{row.category}</td>
+                <td className="py-2 px-4 text-green-700 font-bold">{row.gross_revenue}</td>
+                <td className="py-2 px-4 text-blue-700 font-bold">{row.net_profit}</td>
+                <td className="py-2 px-4 text-gray-800">
+                  {row.gross_revenue > 0
+                    ? ((row.net_profit / row.gross_revenue) * 100).toFixed(2)
+                    : "0"}%
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
       {/* Detailed Sales Table */}
       <h2 className="text-2xl font-semibold text-gray-700 mb-4">Detailed Sales</h2>
       <div className="overflow-x-auto mb-10">
@@ -370,9 +531,10 @@ function ReportsPage() {
           </tbody>
         </table>
       </div>
-            {/* Current Stock Levels Table with Restock Controls */}
+
+      {/* Current Stock Levels Table with Restock Controls */}
       <h2 className="text-2xl font-semibold text-gray-700 mb-4">Current Stock Levels</h2>
-      <div className="overflow-x-auto">
+      <div className="overflow-x-auto mb-10">
         <table className="min-w-full bg-white shadow rounded-lg">
           <thead className="bg-green-100">
             <tr>
@@ -399,7 +561,7 @@ function ReportsPage() {
                 <td className="py-2 px-4">
                   <button
                     onClick={() => setRestockTarget(row.id)}
-                    className="bg-green-500 text-red px-2 py-1 rounded hover:bg-green-800"
+                    className="bg-green-500 text-white px-2 py-1 rounded hover:bg-green-800"
                   >
                     ➕ Restock
                   </button>
@@ -440,7 +602,136 @@ function ReportsPage() {
           </button>
         </div>
       )}
-        </div>
+
+      {/* Chat Assistant */}
+      <h2 className="text-2xl font-semibold text-gray-700 mb-4 mt-10">Ask the Reports Assistant</h2>
+      
+      <div className="bg-white shadow-md rounded-lg p-6 mb-8">
+  <input
+    type="text"
+    value={chatQuery}
+    onChange={(e) => setChatQuery(e.target.value)}
+    placeholder="e.g. Show me yesterday's net profit, 16/03/2026, last week, or this month"
+    className="border rounded p-2 w-full mb-4"
+  />
+  <button
+    onClick={() => {
+      const q = chatQuery.toLowerCase().trim();
+
+      // Yesterday
+      if (q.includes("yesterday")) {
+        const yesterday = new Date();
+        yesterday.setDate(yesterday.getDate() - 1);
+        const dayStr = yesterday.toISOString().split("T")[0];
+        const result = dailyProfit.find((d) => d.day === dayStr);
+        setChatAnswer(
+          result
+            ? `Yesterday's net profit: UGX ${result.net_profit} (Gross: UGX ${result.gross_revenue})`
+            : "No data for yesterday."
+        );
+      }
+
+      // Today
+      else if (q.includes("today")) {
+        const today = new Date();
+        const dayStr = today.toISOString().split("T")[0];
+        const result = dailyProfit.find((d) => d.day === dayStr);
+        setChatAnswer(
+          result
+            ? `Today's net profit: UGX ${result.net_profit} (Gross: UGX ${result.gross_revenue})`
+            : "No data for today yet."
+        );
+      }
+
+      // Highest margin category
+      else if (q.includes("highest margin")) {
+        const best = categoryProfit.reduce((prev, curr) => {
+          const prevMargin = prev.gross_revenue > 0 ? prev.net_profit / prev.gross_revenue : 0;
+          const currMargin = curr.gross_revenue > 0 ? curr.net_profit / curr.gross_revenue : 0;
+          return currMargin > prevMargin ? curr : prev;
+        }, categoryProfit[0]);
+        setChatAnswer(best ? `Highest margin category: ${best.category}` : "No category data available.");
+      }
+
+      // Last week totals
+      else if (q.includes("last week")) {
+        const today = new Date();
+        const sevenDaysAgo = new Date();
+        sevenDaysAgo.setDate(today.getDate() - 7);
+        const startStr = sevenDaysAgo.toISOString().split("T")[0];
+        const endStr = today.toISOString().split("T")[0];
+        const weekData = dailyProfit.filter((d) => d.day >= startStr && d.day <= endStr);
+
+        if (weekData.length > 0) {
+          const totalGross = weekData.reduce((sum, d) => sum + d.gross_revenue, 0);
+          const totalNet = weekData.reduce((sum, d) => sum + d.net_profit, 0);
+          setChatAnswer(`Last week's total profit: Net UGX ${totalNet} (Gross UGX ${totalGross})`);
+        } else {
+          setChatAnswer("No profit data available for last week.");
+        }
+      }
+
+      // This month totals
+      else if (q.includes("this month")) {
+        const today = new Date();
+        const yyyy = today.getFullYear();
+        const mm = String(today.getMonth() + 1).padStart(2, "0");
+        const startStr = `${yyyy}-${mm}-01`;
+        const endStr = today.toISOString().split("T")[0];
+        const monthData = dailyProfit.filter((d) => d.day >= startStr && d.day <= endStr);
+
+        if (monthData.length > 0) {
+          const totalGross = monthData.reduce((sum, d) => sum + d.gross_revenue, 0);
+          const totalNet = monthData.reduce((sum, d) => sum + d.net_profit, 0);
+          setChatAnswer(`This month's total profit: Net UGX ${totalNet} (Gross UGX ${totalGross})`);
+        } else {
+          setChatAnswer("No profit data available for this month.");
+        }
+      }
+
+      // Flexible date queries
+      else {
+        let formatted: string | null = null;
+
+        const regex1 = /^(\d{2}),(\d{2}),(\d{4})$/; // DD,MM,YYYY
+        const regex2 = /^(\d{2})\/(\d{2})\/(\d{4})$/; // DD/MM/YYYY
+        const regex3 = /^(\d{4})-(\d{2})-(\d{2})$/; // YYYY-MM-DD
+
+        if (regex1.test(chatQuery)) {
+          const [_, dd, mm, yyyy] = chatQuery.match(regex1)!;
+          formatted = `${yyyy}-${mm}-${dd}`;
+        } else if (regex2.test(chatQuery)) {
+          const [_, dd, mm, yyyy] = chatQuery.match(regex2)!;
+          formatted = `${yyyy}-${mm}-${dd}`;
+        } else if (regex3.test(chatQuery)) {
+          formatted = chatQuery;
+        }
+
+        if (formatted) {
+          const result = dailyProfit.find((d) => d.day === formatted);
+          setChatAnswer(
+            result
+              ? `Profit for ${formatted}: Net UGX ${result.net_profit} (Gross UGX ${result.gross_revenue})`
+              : `No data available for ${formatted}.`
+          );
+        } else {
+          setChatAnswer("Wrong date format. Please use DD,MM,YYYY or DD/MM/YYYY or YYYY-MM-DD.");
+        }
+      }
+    }}
+    className="bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700"
+  >
+    🔎 Ask
+  </button>
+
+  {chatAnswer && (
+    <div className="mt-4 p-4 bg-gray-100 rounded text-gray-800 font-semibold">
+      {chatAnswer}
+    </div>
+  )}
+</div>
+
+         </div>
   );
 }
 
