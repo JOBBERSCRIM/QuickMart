@@ -723,7 +723,7 @@ function exportDailyProfitCSV() {
   >
     🔎 Ask
   </button>
-
+  
   {chatAnswer && (
     <div className="mt-4 p-4 bg-gray-100 rounded text-gray-800 font-semibold">
       {chatAnswer}
