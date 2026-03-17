@@ -23,7 +23,6 @@ function AdminDashboard() {
     fetchProfiles();
   }, []);
 
-  // ✅ Fetch profiles
   async function fetchProfiles() {
     try {
       const res = await fetch("/api/getProfiles");
@@ -39,7 +38,6 @@ function AdminDashboard() {
     setLoading(false);
   }
 
-  // ✅ Add user
   async function addUser(email: string, password: string, role: string) {
     try {
       const res = await fetch("/api/addUser", {
@@ -59,7 +57,6 @@ function AdminDashboard() {
     }
   }
 
-  // ✅ Update role
   async function updateRole(userId: string, newRole: string) {
     try {
       const res = await fetch("/api/updateRole", {
@@ -79,7 +76,6 @@ function AdminDashboard() {
     }
   }
 
-  // ✅ Delete user
   async function confirmDelete(userId: string) {
     try {
       const res = await fetch("/api/deleteUser", {
@@ -100,13 +96,16 @@ function AdminDashboard() {
     }
   }
 
-  // Toast helper
   function showToast(message: string, type: "success" | "error") {
     setToast({ message, type });
     setTimeout(() => setToast(null), 3000);
   }
 
-  if (loading) return <p className="text-orange-600 font-bold">Loading users...</p>;
+  if (loading) return (
+    <div className="min-h-screen bg-black flex items-center justify-center">
+      <p className="text-orange-500 font-black animate-pulse text-2xl tracking-tighter italic">INITIALIZING COMMAND CENTER...</p>
+    </div>
+  );
 
   const filteredProfiles = profiles.filter(
     (p) =>
@@ -115,161 +114,181 @@ function AdminDashboard() {
   );
 
   return (
-    <div className="min-h-screen bg-black p-8 relative">
-      <h1 className="text-4xl font-extrabold text-orange-500 mb-6">👑 Admin Dashboard</h1>
-      <p className="mb-6 text-white font-medium">Manage user roles and access.</p>
-
-      {/* Toast Notification */}
-      {toast && (
-        <div
-          className={`fixed top-4 right-4 px-4 py-2 rounded shadow-lg text-white font-semibold
-            ${toast.type === "success" ? "bg-green-600" : "bg-red-600"}`}
-        >
-          {toast.message}
-        </div>
-      )}
-
-      {/* Search Bar */}
-      <input
-        type="text"
-        placeholder="Search users by name or email..."
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-        className="mb-6 w-full border-2 border-orange-500 p-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-600 bg-white text-black font-bold"
-      />
-
-      {/* Add User Form */}
-      <form
-        onSubmit={(e) => {
-          e.preventDefault();
-          if (newEmail && newPassword && newRole) {
-            addUser(newEmail, newPassword, newRole);
-            setNewEmail("");
-            setNewPassword("");
-            setNewRole("viewer");
-          }
-        }}
-        className="mb-6 flex gap-3"
-      >
-        {/* Add User Form Inputs */}
-        <input
-          type="email"
-          placeholder="Email"
-          value={newEmail}
-          onChange={(e) => setNewEmail(e.target.value)}
-          className="border-2 border-orange-500 p-2 rounded flex-1 font-bold focus:outline-none focus:ring-2 focus:ring-orange-600"
-          required
-        />
-        <input
-          type="password"
-          placeholder="Password"
-          value={newPassword}
-          onChange={(e) => setNewPassword(e.target.value)}
-          className="border-2 border-orange-500 p-2 rounded flex-1 font-bold focus:outline-none focus:ring-2 focus:ring-orange-600"
-          required
-        />
-        <select
-          value={newRole}
-          onChange={(e) => setNewRole(e.target.value)}
-          className="border-2 border-orange-500 p-2 rounded font-bold focus:outline-none focus:ring-2 focus:ring-orange-600"
-        >
-          <option value="viewer">Viewer</option>
-          <option value="cashier">Cashier</option>
-          <option value="manager">Manager</option>
-          <option value="admin">Admin</option>
-        </select>
-        <button
-          type="submit"
-          className="bg-orange-600 text-white px-6 py-2 rounded-lg font-bold hover:bg-orange-700 shadow-lg"
-        >
-          ➕ Add User
-        </button>
-      </form>
-
-      {/* Users Table */}
-      <div className="overflow-x-auto">
-        <table className="min-w-full bg-white border-2 border-orange-600 shadow-lg rounded-lg">
-          <thead className="bg-black text-orange-500">
-            <tr>
-              <th className="py-3 px-4 text-left font-bold">Name</th>
-              <th className="py-3 px-4 text-left font-bold">Email</th>
-              <th className="py-3 px-4 text-left font-bold">Role</th>
-              <th className="py-3 px-4 text-left font-bold">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredProfiles.map((profile, idx) => (
-              <tr key={profile.id} className={idx % 2 === 0 ? "bg-gray-100" : "bg-gray-200"}>
-                <td className="py-2 px-4 text-black font-bold">{profile.name || "—"}</td>
-                <td className="py-2 px-4 text-black font-bold">{profile.email}</td>
-                <td className="py-2 px-4">
-                  <span
-                    className={`px-2 py-1 rounded-full text-sm font-semibold
-                      ${profile.role === "admin" ? "bg-red-200 text-red-800" :
-                        profile.role === "manager" ? "bg-green-200 text-green-800" :
-                        profile.role === "cashier" ? "bg-yellow-200 text-yellow-800" :
-                        "bg-gray-300 text-gray-800"}`}
-                  >
-                    {profile.role}
-                  </span>
-                </td>
-                <td className="py-2 px-4 flex gap-2">
-                  <select
-                    value={profile.role}
-                    onChange={(e) => updateRole(profile.id, e.target.value)}
-                    className="border-2 border-orange-600 rounded p-2 bg-white text-black font-bold focus:ring-2 focus:ring-orange-700"
-                  >
-                    <option value="admin">Admin</option>
-                    <option value="manager">Manager</option>
-                    <option value="cashier">Cashier</option>
-                    <option value="viewer">Viewer</option>
-                  </select>
-                  {profile.role !== "admin" && (
-                    <button
-                      onClick={() => setDeleteTarget(profile)}
-                      className="bg-red-700 text-white px-3 py-1 rounded hover:bg-red-800 font-bold shadow-lg"
-                    >
-                      🗑️ Delete
-                    </button>
-                  )}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-
-      {/* Confirmation Modal */}
-      {deleteTarget && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
-          <div className="bg-white rounded-lg shadow-lg p-6 w-96 border-2 border-red-600">
-            <h2 className="text-xl font-bold text-black mb-4">Confirm Delete</h2>
-            <p className="text-black mb-6">
-              Are you sure you want to delete <strong>{deleteTarget.email}</strong>?  
-              This action cannot be undone.
+    <div className="min-h-screen bg-[#0a0a0a] text-white p-6 md:p-12 font-sans">
+      <div className="max-w-6xl mx-auto">
+        {/* Header */}
+        <header className="mb-12 flex flex-col md:flex-row md:items-end justify-between gap-4">
+          <div>
+            <h1 className="text-5xl font-black text-orange-500 tracking-tighter mb-2 uppercase italic">
+              Command <span className="text-white">Center</span>
+            </h1>
+            <p className="text-gray-500 font-bold uppercase text-xs tracking-[0.3em]">
+              Denis' Enterprises / Administrative Protocol
             </p>
-            <div className="flex justify-end gap-3">
-              <button
-                onClick={() => setDeleteTarget(null)}
-                className="px-4 py-2 rounded bg-gray-400 text-black hover:bg-gray-500 font-bold"
+          </div>
+          <div className="bg-orange-500/10 border border-orange-500/20 px-4 py-2 rounded-full">
+            <span className="text-orange-500 font-black text-sm uppercase italic">Total Users: {profiles.length}</span>
+          </div>
+        </header>
+
+        {/* Toast Notification */}
+        {toast && (
+          <div className={`fixed top-8 right-8 z-50 px-6 py-4 rounded-2xl shadow-2xl text-white font-black animate-bounce border-2 ${
+            toast.type === "success" ? "bg-green-600 border-green-400" : "bg-red-600 border-red-400"
+          }`}>
+            {toast.message}
+          </div>
+        )}
+
+        <div className="grid gap-8">
+          {/* Action Bar: Search & Add */}
+          <section className="bg-white/5 p-2 rounded-3xl border border-white/10 backdrop-blur-md">
+            <div className="flex flex-col lg:flex-row gap-2">
+              <input
+                type="text"
+                placeholder="Find a member..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="bg-white/5 border-2 border-transparent focus:border-orange-500 p-4 rounded-2xl flex-[2] outline-none font-bold transition-all placeholder:text-gray-600"
+              />
+              
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  if (newEmail && newPassword && newRole) {
+                    addUser(newEmail, newPassword, newRole);
+                    setNewEmail("");
+                    setNewPassword("");
+                    setNewRole("viewer");
+                  }
+                }}
+                className="flex flex-col md:flex-row gap-2 flex-[3]"
               >
-                Cancel
-              </button>
-              <button
-  onClick={() => confirmDelete(deleteTarget.id)}
-  className="px-4 py-2 rounded bg-green-700 text-green hover:bg-red-800 font-bold"
->
-  Confirm Delete
-</button>
+                <input
+                  type="email"
+                  placeholder="New Email"
+                  value={newEmail}
+                  onChange={(e) => setNewEmail(e.target.value)}
+                  className="bg-white/5 border-2 border-transparent focus:border-orange-500 p-4 rounded-2xl outline-none font-bold transition-all flex-1"
+                  required
+                />
+                <input
+                  type="password"
+                  placeholder="Password"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  className="bg-white/5 border-2 border-transparent focus:border-orange-500 p-4 rounded-2xl outline-none font-bold transition-all flex-1"
+                  required
+                />
+                <select
+                  value={newRole}
+                  onChange={(e) => setNewRole(e.target.value)}
+                  className="bg-white/10 border-2 border-transparent p-4 rounded-2xl font-black uppercase text-xs tracking-widest outline-none cursor-pointer hover:bg-white/20 transition-all"
+                >
+                  <option className="bg-black" value="viewer">Viewer</option>
+                  <option className="bg-black" value="cashier">Cashier</option>
+                  <option className="bg-black" value="manager">Manager</option>
+                  <option className="bg-black" value="admin">Admin</option>
+                </select>
+                <button
+                  type="submit"
+                  className="bg-orange-500 hover:bg-orange-400 text-black px-8 py-4 rounded-2xl font-black uppercase tracking-tighter transition-all shadow-[0_0_20px_rgba(249,115,22,0.3)] active:scale-95"
+                >
+                  Create User
+                </button>
+              </form>
+            </div>
+          </section>
+
+          {/* Users Table */}
+          <section className="bg-white rounded-[2rem] overflow-hidden shadow-2xl">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left">
+                <thead>
+                  <tr className="bg-black text-orange-500 border-b border-white/10">
+                    <th className="py-6 px-8 text-xs font-black uppercase tracking-widest">Identity</th>
+                    <th className="py-6 px-8 text-xs font-black uppercase tracking-widest">Access Level</th>
+                    <th className="py-6 px-8 text-xs font-black uppercase tracking-widest text-right">Operations</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {filteredProfiles.map((profile) => (
+                    <tr key={profile.id} className="hover:bg-gray-50 transition-colors group">
+                      <td className="py-6 px-8">
+                        <div className="font-black text-gray-900 text-lg">{profile.name || "Anonymous User"}</div>
+                        <div className="text-gray-400 font-bold text-sm">{profile.email}</div>
+                      </td>
+                      <td className="py-6 px-8">
+                        <span className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-tighter shadow-sm ${
+                          profile.role === "admin" ? "bg-red-600 text-white" :
+                          profile.role === "manager" ? "bg-blue-600 text-white" :
+                          profile.role === "cashier" ? "bg-green-600 text-white" :
+                          "bg-gray-200 text-gray-700"
+                        }`}>
+                          {profile.role}
+                        </span>
+                      </td>
+                      <td className="py-6 px-8">
+                        <div className="flex justify-end items-center gap-3">
+                          <select
+                            value={profile.role}
+                            onChange={(e) => updateRole(profile.id, e.target.value)}
+                            className="bg-gray-100 border-2 border-transparent hover:border-orange-500 px-3 py-2 rounded-xl text-black font-black text-xs uppercase outline-none transition-all cursor-pointer"
+                          >
+                            <option value="admin">Admin</option>
+                            <option value="manager">Manager</option>
+                            <option value="cashier">Cashier</option>
+                            <option value="viewer">Viewer</option>
+                          </select>
+                          
+                          {profile.role !== "admin" && (
+                            <button
+                              onClick={() => setDeleteTarget(profile)}
+                              className="p-2 text-gray-300 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all"
+                            >
+                              <span className="text-xl">🗑️</span>
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </section>
+        </div>
+
+        {/* Delete Confirmation Modal */}
+        {deleteTarget && (
+          <div className="fixed inset-0 bg-black/90 backdrop-blur-sm flex items-center justify-center p-4 z-[100] animate-in fade-in duration-300">
+            <div className="bg-white rounded-[2.5rem] shadow-2xl p-10 max-w-md w-full border-[6px] border-red-600">
+              <h2 className="text-3xl font-black text-black mb-4 uppercase italic tracking-tighter">Security Breach?</h2>
+              <p className="text-gray-600 font-bold mb-8 leading-relaxed">
+                You are about to terminate access for <span className="text-red-600 underline">{deleteTarget.email}</span>. This protocol is irreversible.
+              </p>
+              <div className="grid grid-cols-2 gap-4">
+                <button
+                  onClick={() => setDeleteTarget(null)}
+                  className="px-6 py-4 rounded-2xl bg-gray-100 text-gray-500 hover:bg-gray-200 font-black uppercase tracking-widest text-xs transition-all"
+                >
+                  Abort
+                </button>
+                <button
+                  onClick={() => confirmDelete(deleteTarget.id)}
+                  className="px-6 py-4 rounded-2xl bg-red-600 text-white hover:bg-red-700 font-black uppercase tracking-widest text-xs shadow-lg shadow-red-200 transition-all"
+                >
+                  Confirm Delete
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }
 
-// ✅ Wrap in ProtectedRoute so only Admins can access
 export default function AdminPage() {
   return (
     <ProtectedRoute allowedRoles={["admin"]}>

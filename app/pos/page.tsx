@@ -11,11 +11,9 @@ function POSPage(): JSX.Element {
   const [quantity, setQuantity] = useState("");
   const [message, setMessage] = useState<{ type: string; text: string } | null>(null);
 
-  // ✅ Price list state + search
   const [priceList, setPriceList] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
 
-  // Calculator state
   const [calcInput, setCalcInput] = useState("");
   const [calcResult, setCalcResult] = useState<number | null>(null);
 
@@ -27,11 +25,7 @@ function POSPage(): JSX.Element {
 
   async function fetchItems() {
     const { data, error } = await supabase.from("items").select("*");
-    if (error) {
-      console.error("Error fetching items:", error.message);
-    } else {
-      setItems(data ?? []);
-    }
+    if (!error) setItems(data ?? []);
   }
 
   async function fetchSales() {
@@ -40,20 +34,12 @@ function POSPage(): JSX.Element {
       .select("*, items(name)")
       .order("timestamp", { ascending: false })
       .limit(10);
-    if (error) {
-      console.error("Error fetching sales:", error.message);
-    } else {
-      setSales(data ?? []);
-    }
+    if (!error) setSales(data ?? []);
   }
 
   async function fetchPriceList() {
     const { data, error } = await supabase.from("price_list").select("*");
-    if (error) {
-      console.error("Error fetching price list:", error.message);
-    } else {
-      setPriceList(data ?? []);
-    }
+    if (!error) setPriceList(data ?? []);
   }
 
   async function processSale(e: React.FormEvent) {
@@ -63,13 +49,12 @@ function POSPage(): JSX.Element {
 
     const qty = parseInt(quantity);
     if (qty > item.quantity) {
-      setMessage({ type: "error", text: "Not enough stock available!" });
+      setMessage({ type: "error", text: "⚠️ Not enough stock available!" });
       return;
     }
 
     const totalPrice = item.price * qty;
 
-    // Update stock
     const { error: updateError } = await supabase
       .from("items")
       .update({ quantity: item.quantity - qty })
@@ -80,12 +65,10 @@ function POSPage(): JSX.Element {
       return;
     }
 
-    // ✅ Kampala-local timestamp
     const timestamp = new Date().toLocaleString("sv-SE", {
       timeZone: "Africa/Kampala",
     });
 
-    // Insert sale
     const { error: saleError } = await supabase.from("sales").insert([
       {
         item_id: item.id,
@@ -108,11 +91,10 @@ function POSPage(): JSX.Element {
     fetchSales();
     setMessage({
       type: "success",
-      text: `✔ Sale recorded: ${qty} ${item.unit} of ${item.name} (${item.category}) = ${totalPrice} UGX`,
+      text: `✔ Recorded: ${qty} ${item.unit} of ${item.name} = ${totalPrice.toLocaleString()} UGX`,
     });
   }
 
-  // Calculator logic
   function handleButtonClick(value: string) {
     if (value === "C") {
       setCalcInput("");
@@ -123,7 +105,6 @@ function POSPage(): JSX.Element {
         setCalcResult(result);
       } catch {
         setCalcResult(null);
-        setMessage({ type: "error", text: "Invalid calculation input." });
       }
     } else {
       setCalcInput(calcInput + value);
@@ -132,172 +113,154 @@ function POSPage(): JSX.Element {
 
   const buttons = ["7","8","9","/","4","5","6","*","1","2","3","-","0",".","C","+","="];
 
-  // ✅ Filtered price list
   const filteredPriceList = priceList.filter((item) =>
     item.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
   return (
-    <div className="min-h-screen bg-gray-50 p-8">
-      <h1 className="text-3xl font-bold text-gray-800 mb-6">
-        💵 Denis' Enterprises POS
-      </h1>
-
-      {message && (
-        <div
-          className={`mb-6 p-4 rounded-lg ${
-            message.type === "success"
-              ? "bg-green-100 text-green-700 border border-green-400"
-              : "bg-red-100 text-red-700 border border-red-400"
-          }`}
-        >
-          {message.text}
-        </div>
-      )}
-
-      <div className="grid md:grid-cols-2 gap-8">
-        {/* POS Form */}
-        <form
-          onSubmit={processSale}
-          className="bg-white shadow-md rounded-lg p-6 space-y-4"
-        >
-          <select
-            value={selectedItem}
-            onChange={(e) => setSelectedItem(e.target.value)}
-            className="w-full border rounded p-2 text-gray-800"
-            required
-          >
-            <option value="">Select item</option>
-            {items.map((item) => (
-              <option key={item.id} value={item.id}>
-                {item.name} ({item.category}) — {item.quantity} {item.unit} left
-              </option>
-            ))}
-          </select>
-
-          <input
-            placeholder="Quantity"
-            type="number"
-            value={quantity}
-            onChange={(e) => setQuantity(e.target.value)}
-            className="w-full border rounded p-2 text-gray-800"
-            required
-          />
-
-          <button
-            type="submit"
-            className="w-full bg-green-600 text-white py-2 rounded hover:bg-green-700"
-          >
-            ✅ Process Sale
-          </button>
-        </form>
-
-        {/* Quick Calculator */}
-        <div className="bg-white shadow-md rounded-lg p-6 space-y-4">
-          <h2 className="text-xl font-semibold text-gray-700">🧮 Quick Calculator</h2>
-          <div className="border rounded p-3 text-3xl font-extrabold text-green-800 bg-white shadow-inner tracking-wide">
-            {calcInput || "0"}
+    <div className="min-h-screen bg-gray-100 p-6 font-sans text-gray-900">
+      <div className="max-w-7xl mx-auto">
+        <div className="flex justify-between items-center mb-8 bg-white p-6 rounded-2xl shadow-sm border-l-8 border-green-600">
+          <div>
+            <h1 className="text-3xl font-black tracking-tight text-gray-900 uppercase">Cashier Terminal</h1>
+            <p className="text-gray-400 font-bold text-xs uppercase tracking-widest">Denis' Enterprises — POS System</p>
           </div>
-          {calcResult !== null && (
-            <div className="text-3xl font-extrabold text-green-900 mt-2">
-              Result: {calcResult}
+          <div className="text-right">
+            <p className="text-sm font-black text-gray-400 uppercase">Station Status</p>
+            <p className="text-green-600 font-black">● ONLINE / READY</p>
+          </div>
+        </div>
+
+        {message && (
+          <div className={`mb-8 p-5 rounded-2xl font-bold shadow-lg animate-pulse border-2 ${
+            message.type === "success" ? "bg-green-50 border-green-200 text-green-700" : "bg-red-50 border-red-200 text-red-700"
+          }`}>
+            {message.text}
+          </div>
+        )}
+
+        <div className="grid lg:grid-cols-12 gap-8 mb-12">
+          {/* Main Checkout Area */}
+          <div className="lg:col-span-7 space-y-8">
+            <div className="bg-white p-8 rounded-3xl shadow-xl border border-gray-100">
+              <h2 className="text-lg font-black uppercase text-gray-500 mb-6 flex items-center gap-2">
+                <span>🛒</span> Checkout Process
+              </h2>
+              <form onSubmit={processSale} className="space-y-6">
+                <div>
+                  <label className="block text-[10px] font-black uppercase text-gray-400 mb-2 ml-1">Select Inventory Item</label>
+                  <select
+                    value={selectedItem}
+                    onChange={(e) => setSelectedItem(e.target.value)}
+                    className="w-full border-2 border-gray-100 bg-gray-50 rounded-2xl p-4 focus:bg-white focus:border-green-600 outline-none font-bold text-lg transition-all appearance-none"
+                    required
+                  >
+                    <option value="">Choose item...</option>
+                    {items.map((item) => (
+                      <option key={item.id} value={item.id}>
+                        {item.name} — {item.quantity} {item.unit} available
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-black uppercase text-gray-400 mb-2 ml-1">Quantity to Sell</label>
+                  <input
+                    placeholder="Enter amount..."
+                    type="number"
+                    value={quantity}
+                    onChange={(e) => setQuantity(e.target.value)}
+                    className="w-full border-2 border-gray-100 bg-gray-50 rounded-2xl p-4 focus:bg-white focus:border-green-600 outline-none font-black text-xl text-green-700"
+                    required
+                  />
+                </div>
+
+                <button type="submit" className="w-full bg-green-600 hover:bg-green-700 text-white font-black py-5 rounded-2xl shadow-lg transition-all transform hover:scale-[1.01] active:scale-95 text-lg uppercase tracking-wider">
+                  Complete Transaction
+                </button>
+              </form>
             </div>
-          )}
-          <div className="grid grid-cols-4 gap-2">
-            {buttons.map((btn) => (
-              <button
-                key={btn}
-                onClick={() => handleButtonClick(btn)}
-                className={`p-4 rounded font-bold ${
-                  btn === "="
-                    ? "col-span-4 bg-green-600 text-white hover:bg-green-700"
-                    : btn === "C"
-                    ? "bg-red-100 text-red-700 hover:bg-red-200"
-                    : "bg-green-100 text-green-700 hover:bg-green-200"
-                }`}
-              >
-                {btn}
-              </button>
-            ))}
+
+            {/* Price List Searchable */}
+            <div className="bg-white p-8 rounded-3xl shadow-lg border border-gray-100 overflow-hidden">
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-lg font-black uppercase text-gray-500">📋 Price Inquiry</h2>
+                <input
+                  type="text"
+                  placeholder="Search prices..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="bg-gray-50 border-2 border-gray-100 rounded-xl px-4 py-2 text-sm font-bold focus:border-blue-500 outline-none"
+                />
+              </div>
+              <div className="max-h-60 overflow-y-auto custom-scrollbar">
+                <table className="w-full text-left">
+                  <thead className="sticky top-0 bg-white">
+                    <tr className="border-b-2 border-gray-100">
+                      <th className="py-3 text-[10px] font-black uppercase text-gray-400">Item Name</th>
+                      <th className="py-3 text-[10px] font-black uppercase text-gray-400 text-right">Unit Price</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-50">
+                    {filteredPriceList.map((item, idx) => (
+                      <tr key={idx} onClick={() => setSelectedItem(item.id)} className="hover:bg-blue-50 cursor-pointer group transition-colors">
+                        <td className="py-4 font-black text-gray-800 group-hover:text-blue-700">{item.name}</td>
+                        <td className="py-4 font-black text-right text-green-600">{Number(item.price).toLocaleString()} <span className="text-[10px] text-gray-400">UGX</span></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
           </div>
-        </div>
-      </div> {/* closes grid wrapper */}
 
-      {/* Sales History */}
-      <div className="mt-10">
-        <h2 className="text-2xl font-semibold text-gray-700 mb-4">Recent Sales</h2>
-        <div className="overflow-x-auto">
-          <table className="min-w-full bg-white shadow rounded-lg">
-            <thead className="bg-gray-100">
-              <tr>
-                <th className="py-2 px-4 text-left text-gray-800 font-semibold">Item</th>
-                <th className="py-2 px-4 text-left text-gray-800 font-semibold">Category</th>
-                <th className="py-2 px-4 text-left text-gray-800 font-semibold">Unit</th>
-                <th className="py-2 px-4 text-left text-gray-800 font-semibold">Qty Sold</th>
-                <th className="py-2 px-4 text-left text-gray-800 font-semibold">Total Price (UGX)</th>
-                <th className="py-2 px-4 text-left text-gray-800 font-semibold">Date</th>
-              </tr>
-            </thead>
-            <tbody>
-              {sales.map((sale) => (
-                <tr key={sale.id} className="border-t">
-                  <td className="py-2 px-4 font-bold text-gray-900">
-                    {sale.items?.name || "Unknown Item"}
-                  </td>
-                  <td className="py-2 px-4 text-gray-800">{sale.category}</td>
-                  <td className="py-2 px-4 text-gray-800">{sale.unit}</td>
-                  <td className="py-2 px-4 text-blue-700 font-bold">{sale.qty_sold}</td>
-                  <td className="py-2 px-4 text-green-700 font-bold">{sale.total_price}</td>
-                  <td className="py-2 px-4 text-gray-700">
-                    {new Date(sale.timestamp).toLocaleString("en-UG", {
-                      timeZone: "Africa/Kampala",
-                      year: "numeric",
-                      month: "short",
-                      day: "numeric",
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {/* Price List */}
-      <div className="mt-10">
-        <h2 className="text-2xl font-semibold text-gray-700 mb-4">Price List</h2>
-        {/* ✅ Search bar */}
-        <input
-          type="text"
-          placeholder="Search item..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="w-full border rounded p-2 mb-4 text-gray-800"
-        />
-        <div className="overflow-x-auto">
-          <table className="min-w-full bg-white shadow rounded-lg">
-            <thead className="bg-gray-100">
-              <tr>
-                <th className="py-2 px-4 text-left text-gray-800 font-semibold">Item</th>
-                <th className="py-2 px-4 text-left text-gray-800 font-semibold">Price (UGX)</th>
-                <th className="py-2 px-4 text-left text-gray-800 font-semibold">Unit</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredPriceList.map((item, idx) => (
-                <tr
-                  key={idx}
-                  className="border-t hover:bg-gray-50 cursor-pointer"
-                  onClick={() => setSelectedItem(item.id)} // ✅ click-to-select
-                >
-                  <td className="py-2 px-4 font-bold text-gray-900">{item.name}</td>
-                  <td className="py-2 px-4 text-green-700 font-bold">{item.price}</td>
-                  <td className="py-2 px-4 text-gray-800">{item.unit}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          {/* Right Sidebar: Calculator & Summary */}
+          <div className="lg:col-span-5 space-y-8">
+            <div className="bg-gray-900 rounded-3xl p-8 shadow-2xl">
+              <h2 className="text-xs font-black uppercase text-gray-500 mb-6 tracking-widest">Quick Calculator</h2>
+              <div className="bg-black/40 rounded-2xl p-6 mb-6 border border-gray-800">
+                <div className="text-right text-gray-500 font-mono text-sm h-4 mb-1 uppercase tracking-tighter">
+                  {calcResult !== null ? `Result` : `Ready`}
+                </div>
+                <div className="text-right text-4xl font-black text-green-500 font-mono truncate">
+                  {calcResult !== null ? calcResult.toLocaleString() : (calcInput || "0")}
+                </div>
+              </div>
+              <div className="grid grid-cols-4 gap-3">
+                {buttons.map((btn) => (
+                  <button
+                    key={btn}
+                    onClick={() => handleButtonClick(btn)}
+                    className={`p-5 rounded-2xl font-black text-xl transition-all active:scale-90 ${
+                      btn === "=" ? "col-span-2 bg-green-600 text-white hover:bg-green-500" :
+                      btn === "C" ? "bg-red-900/40 text-red-400 hover:bg-red-800/60" :
+                      ["/", "*", "-", "+"].includes(btn) ? "bg-gray-800 text-blue-400 hover:bg-gray-700" :
+                      "bg-gray-800 text-gray-300 hover:bg-gray-700"
+                    }`}
+                  >
+                    {btn}
+                  </button>
+                ))}
+              </div>
+            </div>
+            
+            {/* Sales History Teaser */}
+            <div className="bg-white p-8 rounded-3xl shadow-lg border border-gray-100">
+              <h2 className="text-lg font-black uppercase text-gray-500 mb-6">Recent Activity</h2>
+              <div className="space-y-4">
+                {sales.map((sale) => (
+                  <div key={sale.id} className="flex justify-between items-center p-3 bg-gray-50 rounded-xl border-l-4 border-blue-500">
+                    <div>
+                      <p className="font-black text-gray-800 text-sm">{sale.items?.name}</p>
+                      <p className="text-[10px] text-gray-400 font-bold uppercase">{new Date(sale.timestamp).toLocaleTimeString()}</p>
+                    </div>
+                    <p className="font-black text-green-700">+{Number(sale.total_price).toLocaleString()}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -306,7 +269,7 @@ function POSPage(): JSX.Element {
 
 export default function POS() {
   return (
-    <ProtectedRoute allowedRoles={["cashier"]}>
+    <ProtectedRoute allowedRoles={["cashier", "admin", "manager"]}>
       <POSPage />
     </ProtectedRoute>
   );
